@@ -59,4 +59,5 @@ interface ClipDao {
     // Toggle pin
     @Query("UPDATE clip_history SET isPinned = :pinned WHERE id = :id")
     suspend fun setPinned(id: Long, pinned: Boolean)
+
 }

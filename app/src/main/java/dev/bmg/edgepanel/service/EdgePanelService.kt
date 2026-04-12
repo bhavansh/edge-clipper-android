@@ -51,61 +51,97 @@ class EdgePanelService : Service() {
     }
 
 // =========================================================================
-// Invisible focus window — 1x1 transparent overlay used ONLY to get
-// MIUI clipboard access. Never visible, never intercepts touches.
+// Focus window — only used to get MIUI clipboard access.
+// FLAG_ALT_FOCUSABLE_IM is the key: we can be focusable without
+// stealing keyboard (IME) focus or intercepting back gestures.
 // =========================================================================
 
     private var focusWindow: View? = null
     private var focusWindowParams: WindowManager.LayoutParams? = null
+    private var clipboardPollHandler: Handler? = null
+    private val POLL_INTERVAL_MS = 5000L
+
+    private val idleFlags =
+        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+
+    private val readFlags =
+        WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM or   // ← IME keeps priority
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
 
     private fun createFocusWindow() {
         val params = WindowManager.LayoutParams(
             1, 1,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            idleFlags,
             PixelFormat.TRANSLUCENT
-        ).also {
-            it.gravity = Gravity.START or Gravity.TOP
-            it.x = 0
-            it.y = 0
-            it.alpha = 0f  // fully transparent
+        ).apply {
+            gravity = Gravity.START or Gravity.TOP
+            x = 0; y = 0
+            alpha = 0f
         }
-
         val view = View(this)
         focusWindow = view
         focusWindowParams = params
         windowManager.addView(view, params)
+
+        startPeriodicClipboardPoll()
+    }
+
+    private fun startPeriodicClipboardPoll() {
+        val handler = Handler(Looper.getMainLooper())
+        clipboardPollHandler = handler
+
+        val pollRunnable = object : Runnable {
+            override fun run() {
+                doFocusRead()
+                handler.postDelayed(this, POLL_INTERVAL_MS)
+            }
+        }
+        // First read after a short warm-up delay
+        handler.postDelayed(pollRunnable, 1500)
+    }
+
+    private fun stopPeriodicClipboardPoll() {
+        clipboardPollHandler?.removeCallbacksAndMessages(null)
+        clipboardPollHandler = null
+    }
+
+    fun triggerFocusRead() {
+        // Called on panel open — immediate read, no delay needed
+        doFocusRead()
+    }
+
+    private fun doFocusRead() {
+        val fw = focusWindow ?: return
+        val params = focusWindowParams ?: return
+
+        // Step 1: Switch to focusable-but-IME-safe flags
+        params.flags = readFlags
+        try {
+            windowManager.updateViewLayout(fw, params)
+        } catch (e: Exception) {
+            return
+        }
+
+        // Step 2: Read clipboard
+        ClipboardAccessibilityService.instance?.readClipboardNow()
+
+        // Step 3: Restore idle flags after a minimal delay (60ms is enough)
+        Handler(Looper.getMainLooper()).postDelayed({
+            params.flags = idleFlags
+            try { windowManager.updateViewLayout(fw, params) } catch (_: Exception) {}
+        }, 60)
     }
 
     private fun removeFocusWindow() {
+        stopPeriodicClipboardPoll()
         focusWindow?.let { safeRemoveView(it) }
         focusWindow = null
         focusWindowParams = null
     }
-
-    fun triggerFocusRead() {
-        val fw = focusWindow ?: return
-        val params = focusWindowParams ?: return
-
-        // Make focusable briefly
-        params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
-        try {
-            windowManager.updateViewLayout(fw, params)
-        } catch (e: Exception) { return }
-
-        ClipboardAccessibilityService.instance?.readClipboardNow()
-
-        // Restore non-focusable immediately after read
-        Handler(Looper.getMainLooper()).postDelayed({
-            params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
-            try { windowManager.updateViewLayout(fw, params) } catch (_: Exception) {}
-        }, 80)
-    }
-
 
     override fun onDestroy() {
         scope.cancel()
