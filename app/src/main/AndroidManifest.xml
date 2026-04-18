@@ -6,6 +6,7 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" /> <!-- ✅ ADDED: required for specialUse FGS type on API 34+ -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
@@ -16,7 +17,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.EdgePanel">
 
-        <!-- Inside <application> -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -37,17 +37,21 @@
             </intent-filter>
         </activity>
 
-        <!-- ── Clipboard Proxy (no UI, instant finish) ──────────────── -->
+        <!-- ── Clipboard Proxy ──────────────────────────────────────── -->
         <activity
             android:name=".clipboard.ClipboardProxyActivity"
             android:exported="false"
             android:theme="@android:style/Theme.NoDisplay" />
 
-        <!-- ── Edge Panel Overlay Service ───────────────────────────── -->
+        <!-- ── Edge Panel Service ───────────────────────────────────── -->
         <service
             android:name=".service.EdgePanelService"
             android:exported="false"
-            android:foregroundServiceType="specialUse" />
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_TYPE"
+                android:value="This service maintains a floating edge panel overlay for quick clipboard access, ensuring the overlay remains active and responsive even when the main app is in the background." />
+        </service>
 
         <!-- ── Accessibility Service ────────────────────────────────── -->
         <service
