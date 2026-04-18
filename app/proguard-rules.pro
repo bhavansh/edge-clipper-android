@@ -19,3 +19,20 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Room
+-keep class androidx.room.RoomDatabase { *; }
+-keep class * extends androidx.room.RoomDatabase { *; }
+-keep class * extends androidx.room.Dao { *; }
+
+# SQLCipher
+-keep class net.zetetic.database.sqlcipher.** { *; }
+-keep class net.zetetic.database.** { *; }
+
+# SQLCipher JNI
+-keep class net.zetetic.database.sqlcipher.SQLiteDatabase { *; }
+-keep class net.zetetic.database.sqlcipher.SQLiteOpenHelper { *; }
+-keep class net.zetetic.database.sqlcipher.SupportOpenHelperFactory { *; }
+
+# AndroidX Crypto
+-keep class androidx.security.crypto.** { *; }
