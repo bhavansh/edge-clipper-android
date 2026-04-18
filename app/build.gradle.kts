@@ -8,15 +8,14 @@ plugins {
 }
 
 android {
-    applicationVariants.all {
-        outputs.all {
-            (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl).outputFileName =
-                "EdgeClipper-${buildType.name}-${versionName}.apk"
-        }
-    }
-
     namespace = "dev.bmg.edgepanel"
     compileSdk = 35
+
+    val keystoreProperties = Properties()
+    val keystorePropertiesFile = rootProject.file("keystore.properties")
+    if (keystorePropertiesFile.exists()) {
+        keystoreProperties.load(keystorePropertiesFile.inputStream())
+    }
 
     defaultConfig {
         applicationId = "dev.bmg.edgepanel"
@@ -27,18 +26,17 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    val keystoreProperties = Properties().also { props ->
-        val file = rootProject.file("keystore.properties")
-        if (file.exists()) props.load(file.inputStream())
-    }
-
-
     signingConfigs {
         create("release") {
-            storeFile = keystoreProperties["storeFile"]?.let { file(it) }
-            storePassword = keystoreProperties["storePassword"] as String?
-            keyAlias = keystoreProperties["keyAlias"] as String?
-            keyPassword = keystoreProperties["keyPassword"] as String?
+            val keyFile = keystoreProperties["storeFile"] as String?
+            if (keyFile != null) {
+                storeFile = file(keyFile)
+                storePassword = keystoreProperties["storePassword"] as String?
+                keyAlias = keystoreProperties["keyAlias"] as String?
+                keyPassword = keystoreProperties["keyPassword"] as String?
+                enableV1Signing = true
+                enableV2Signing = true
+            }
         }
     }
 
@@ -50,6 +48,20 @@ android {
                 "proguard-rules.pro"
             )
             signingConfig = signingConfigs.getByName("release")
+        }
+
+        // Add this to troubleshoot
+        create("debugWithReleaseKey") {
+            initWith(getByName("debug"))
+            signingConfig = signingConfigs.getByName("release")
+            matchingFallbacks += listOf("debug")
+        }
+    }
+
+    applicationVariants.all {
+        outputs.all {
+            (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl).outputFileName =
+                "EdgeClipper-${buildType.name}-${versionName}.apk"
         }
     }
 
@@ -64,7 +76,6 @@ android {
         compose = true
     }
 }
-
 
 dependencies {
     implementation(libs.androidx.core.ktx)
