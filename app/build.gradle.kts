@@ -8,7 +8,7 @@ plugins {
 }
 
 android {
-    namespace = "dev.bmg.edgepanel"
+    namespace = "dev.bmg.edgeclip"
     compileSdk = 35
 
     val keystoreProperties = Properties()
@@ -18,7 +18,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "dev.bmg.edgepanel"
+        applicationId = "dev.bmg.edgeclip"
         minSdk = 28
         targetSdk = 35
         versionCode = 1
@@ -61,7 +61,7 @@ android {
     applicationVariants.all {
         outputs.all {
             (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl).outputFileName =
-                "EdgePanel-${buildType.name}-${versionName}.apk"
+                "EdgeClip-${buildType.name}-${versionName}.apk"
         }
     }
 

@@ -1,6 +1,6 @@
-# EdgePanel - Secure Clipboard Manager
+# EdgeClip - Secure Clipboard Manager
 
-EdgePanel is an Android utility that provides quick access to your clipboard history through a floating edge overlay. It captures both text and images securely using a background accessibility service and stores them in an encrypted database.
+EdgeClip is an Android utility that provides quick access to your clipboard history through a floating edge overlay. It captures both text and images securely using a background accessibility service and stores them in an encrypted database.
 
 ## Features
 
@@ -15,7 +15,7 @@ EdgePanel is an Android utility that provides quick access to your clipboard his
 Due to Android's security measures for sideloaded apps, you must follow these steps after installing the APK:
 
 1. **Install** the APK on your device.
-2. Go to **Settings** > **Apps** > **EdgePanel**.
+2. Go to **Settings** > **Apps** > **EdgeClip**.
 3. Tap the **three-dot menu** in the top-right corner.
 4. Select **"Allow restricted settings"**.
 5. Open the app and grant the **Accessibility** and **Display over other apps** permissions.

@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "EdgePanel"
+rootProject.name = "EdgeClip"
 include(":app")

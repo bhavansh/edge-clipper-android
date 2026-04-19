@@ -32,4 +32,4 @@
 -dontwarn com.google.crypto.tink.**
 
 # --- App Data Models ---
--keep class dev.bmg.edgepanel.data.** { *; }
+-keep class dev.bmg.edgeclip.data.** { *; }

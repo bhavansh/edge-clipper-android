@@ -16,7 +16,7 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.EdgePanel">
+        android:theme="@style/Theme.EdgeClip">
 
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -44,21 +44,21 @@
             android:exported="false"
             android:theme="@android:style/Theme.NoDisplay" />
 
-        <!-- ── Edge Panel Service ───────────────────────────────────── -->
+        <!-- ── EdgeClip Service ───────────────────────────────────── -->
         <service
-            android:name=".service.EdgePanelService"
+            android:name=".service.EdgeClipService"
             android:exported="false"
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_TYPE"
-                android:value="This service maintains a floating edge panel overlay for quick clipboard access, ensuring the overlay remains active and responsive even when the main app is in the background." />
+                android:value="This service maintains a floating edge clip overlay for quick clipboard access, ensuring the overlay remains active and responsive even when the main app is in the background." />
         </service>
 
         <!-- ── Accessibility Service ────────────────────────────────── -->
         <service
             android:name=".clipboard.ClipboardAccessibilityService"
             android:exported="true"
-            android:label="Edge Panel"
+            android:label="EdgeClip"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
