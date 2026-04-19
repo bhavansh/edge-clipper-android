@@ -187,8 +187,18 @@ fun EdgeClipScreen(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
             )
+            
+            val versionName = remember {
+                try {
+                    val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+                    packageInfo.versionName ?: "1.0"
+                } catch (e: Exception) {
+                    "1.0"
+                }
+            }
+
             Text(
-                "v1.0  ·  by Bhavansh",
+                "v$versionName  ·  by Bhavansh",
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                 modifier = Modifier.offset(y = (-8).dp)
