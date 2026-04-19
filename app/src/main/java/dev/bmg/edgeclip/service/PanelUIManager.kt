@@ -11,6 +11,8 @@ import android.view.HapticFeedbackConstants
 import android.view.View
 import android.view.ViewOutlineProvider
 import android.widget.*
+import androidx.core.content.ContextCompat
+import dev.bmg.edgeclip.R
 import dev.bmg.edgeclip.data.ClipEntity
 import dev.bmg.edgeclip.data.ClipRepository
 import dev.bmg.edgeclip.data.ClipType
@@ -50,14 +52,14 @@ class PanelUIManager(
         addView(TextView(context).apply {
             text = "No items"
             textSize = 16f
-            setTextColor(Color.parseColor("#1C1C1E"))
+            setTextColor(ContextCompat.getColor(context, R.color.text_primary))
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
         })
         addView(TextView(context).apply {
             text = "Copied text will appear here"
             textSize = 13f
-            setTextColor(Color.parseColor("#8E8E93"))
+            setTextColor(ContextCompat.getColor(context, R.color.text_secondary))
             gravity = Gravity.CENTER
             setPadding(0, dpToPx(6), 0, 0)
         })
@@ -71,7 +73,7 @@ class PanelUIManager(
                 addView(TextView(context).apply {
                     text = clip.text
                     textSize = 13f
-                    setTextColor(Color.parseColor("#1C1C1E"))
+                    setTextColor(ContextCompat.getColor(context, R.color.text_primary))
                     setLineSpacing(0f, 1.35f)
                     setPadding(0, 0, 0, dpToPx(26))
                     layoutParams = FrameLayout.LayoutParams(
@@ -132,22 +134,22 @@ class PanelUIManager(
     private fun buildCopyImagePill(clip: ClipEntity): TextView = TextView(context).apply {
         text = "Copy"
         textSize = 11.5f
-        setTextColor(Color.parseColor("#48484A"))
+        setTextColor(ContextCompat.getColor(context, R.color.pill_text))
         typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
         gravity = Gravity.CENTER
-        background = pill(Color.parseColor("#E8E8ED"))
+        background = pill(ContextCompat.getColor(context, R.color.pill_bg))
         setPadding(dpToPx(12), dpToPx(5), dpToPx(12), dpToPx(5))
 
         setOnClickListener {
             performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
             onCopyImage(clip)
             text = "Copied ✓"
-            setTextColor(Color.parseColor("#34C759"))
-            background = pill(Color.parseColor("#E3F9E8"))
+            setTextColor(ContextCompat.getColor(context, R.color.pill_text_success))
+            background = pill(ContextCompat.getColor(context, R.color.pill_bg_success))
             postDelayed({
                 text = "Copy"
-                setTextColor(Color.parseColor("#48484A"))
-                background = pill(Color.parseColor("#E8E8ED"))
+                setTextColor(ContextCompat.getColor(context, R.color.pill_text))
+                background = pill(ContextCompat.getColor(context, R.color.pill_bg))
             }, 1800)
         }
     }
@@ -171,22 +173,22 @@ class PanelUIManager(
     private fun buildCopyPill(clipText: String): TextView = TextView(context).apply {
         text = "Copy"
         textSize = 11.5f
-        setTextColor(Color.parseColor("#48484A"))
+        setTextColor(ContextCompat.getColor(context, R.color.pill_text))
         typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
         gravity = Gravity.CENTER
-        background = pill(Color.parseColor("#E8E8ED"))
+        background = pill(ContextCompat.getColor(context, R.color.pill_bg))
         setPadding(dpToPx(12), dpToPx(5), dpToPx(12), dpToPx(5))
 
         setOnClickListener {
             onCopyText(clipText)
             performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
             text = "Copied ✓"
-            setTextColor(Color.parseColor("#34C759"))
-            background = pill(Color.parseColor("#E3F9E8"))
+            setTextColor(ContextCompat.getColor(context, R.color.pill_text_success))
+            background = pill(ContextCompat.getColor(context, R.color.pill_bg_success))
             postDelayed({
                 text = "Copy"
-                setTextColor(Color.parseColor("#48484A"))
-                background = pill(Color.parseColor("#E8E8ED"))
+                setTextColor(ContextCompat.getColor(context, R.color.pill_text))
+                background = pill(ContextCompat.getColor(context, R.color.pill_bg))
             }, 1800)
         }
     }
@@ -194,10 +196,10 @@ class PanelUIManager(
     private fun buildDeletePill(clip: ClipEntity): TextView = TextView(context).apply {
         text = "✕"
         textSize = 11.5f
-        setTextColor(Color.parseColor("#FF3B30"))
+        setTextColor(ContextCompat.getColor(context, R.color.pill_text_danger))
         typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
         gravity = Gravity.CENTER
-        background = pill(Color.parseColor("#FFEEED"))
+        background = pill(ContextCompat.getColor(context, R.color.pill_bg_danger))
         setPadding(dpToPx(10), dpToPx(5), dpToPx(10), dpToPx(5))
 
         setOnClickListener {
@@ -207,7 +209,7 @@ class PanelUIManager(
     }
 
     private fun buildBlockDivider(): View = View(context).apply {
-        setBackgroundColor(Color.parseColor("#F2F2F7"))
+        setBackgroundColor(ContextCompat.getColor(context, R.color.divider))
         layoutParams = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, dpToPx(1)
         )
@@ -217,8 +219,8 @@ class PanelUIManager(
         text = "Clear All"
         textSize = 13f
         gravity = Gravity.CENTER
-        setTextColor(Color.parseColor("#636366"))
-        background = pill(Color.parseColor("#EBEBF0"))
+        setTextColor(ContextCompat.getColor(context, R.color.button_clear_text))
+        background = pill(ContextCompat.getColor(context, R.color.button_clear_bg))
         setPadding(dpToPx(24), dpToPx(7), dpToPx(24), dpToPx(7))
 
         layoutParams = LinearLayout.LayoutParams(

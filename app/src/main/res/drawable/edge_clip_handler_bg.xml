@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <shape xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Light Mode: Gray transparent pill with rounded corners -->
-    <solid android:color="#80808080" />
+    <!-- Theme-aware handler with rounded corners -->
+    <solid android:color="@color/handler_bg" />
     <corners android:radius="12dp" />
 </shape>

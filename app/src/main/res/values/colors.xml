@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Basic Palette -->
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>
     <color name="purple_700">#FF3700B3</color>
@@ -7,4 +8,26 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Semantic UI Colors (Light Mode) -->
+    <color name="panel_bg">#F2FFFFFF</color>
+    <color name="handler_bg">#80666666</color>
+    <color name="handler_border">#00000000</color>
+    
+    <color name="text_primary">#1C1C1E</color>
+    <color name="text_secondary">#8E8E93</color>
+    
+    <color name="pill_bg">#E8E8ED</color>
+    <color name="pill_text">#48484A</color>
+    
+    <color name="pill_bg_success">#E3F9E8</color>
+    <color name="pill_text_success">#34C759</color>
+    
+    <color name="pill_bg_danger">#FFEEED</color>
+    <color name="pill_text_danger">#FF3B30</color>
+    
+    <color name="divider">#F2F2F7</color>
+    
+    <color name="button_clear_bg">#EBEBF0</color>
+    <color name="button_clear_text">#636366</color>
 </resources>

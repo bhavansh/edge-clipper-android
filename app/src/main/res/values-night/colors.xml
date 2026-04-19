@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Semantic UI Colors (Dark Mode) -->
+    <color name="panel_bg">#F21C1C1E</color>
+    <color name="handler_bg">#B3E0E0E0</color>
+    <color name="handler_border">#00000000</color>
+    
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#EBEBF5</color>
+    
+    <color name="pill_bg">#2C2C2E</color>
+    <color name="pill_text">#EBEBF5</color>
+    
+    <color name="pill_bg_success">#1A4022</color>
+    <color name="pill_text_success">#32D74B</color>
+    
+    <color name="pill_bg_danger">#401311</color>
+    <color name="pill_text_danger">#FF453A</color>
+    
+    <color name="divider">#38383A</color>
+    
+    <color name="button_clear_bg">#2C2C2E</color>
+    <color name="button_clear_text">#EBEBF5</color>
+</resources>
