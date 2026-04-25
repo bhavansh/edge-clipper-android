@@ -43,6 +43,11 @@ class EdgeClipService : Service() {
     private lateinit var focusManager: FocusWindowManager
     private lateinit var settingsManager: SettingsManager
 
+    private var currentFocusedPackage: String? = null
+    private var isBlacklistedAppFocused = false
+    private var autoPaused = false
+    private var isProgrammaticUpdate = false
+
     private val restingWidthDp = 26
     private val fullWidthDp = 40
 
@@ -53,7 +58,68 @@ class EdgeClipService : Service() {
             }
         } else if (key == SettingsManager.KEY_EDGE_SIDE) {
             updateHandleSide()
+        } else if (key == SettingsManager.KEY_IS_PAUSED || key == SettingsManager.KEY_BLACKLIST) {
+            // If user manually toggled pause while in a blacklisted app, clear autoPaused
+            if (key == SettingsManager.KEY_IS_PAUSED && isBlacklistedAppFocused && !isProgrammaticUpdate) {
+                autoPaused = false
+            }
+
+            if (key == SettingsManager.KEY_BLACKLIST) {
+                currentFocusedPackage?.let { recalculateBlacklist(it) }
+            }
+            updateVisibilityState()
         }
+    }
+
+    private fun updateVisibilityState() {
+        val isPaused = settingsManager.isPaused
+        // We no longer force hide the handle for blacklist, just honor the pause state
+        setHandleForceHidden(false) 
+
+        if (isPaused) {
+            focusManager.stopPeriodicClipboardPoll()
+        } else {
+            focusManager.restartPolling()
+        }
+    }
+
+    fun onPackageFocused(packageName: String) {
+        val trimmedPkg = packageName.trim()
+        if (trimmedPkg == currentFocusedPackage) return
+        currentFocusedPackage = trimmedPkg
+        
+        // Ignore our own package so we don't accidentally resume monitoring
+        // when the Edge Panel or Settings is opened over a blacklisted app.
+        if (trimmedPkg == this.packageName) return
+        
+        recalculateBlacklist(trimmedPkg)
+    }
+
+    private fun recalculateBlacklist(packageName: String) {
+        val isNowBlacklisted = settingsManager.blacklistedPackages.contains(packageName)
+        val wasBlacklisted = isBlacklistedAppFocused
+        isBlacklistedAppFocused = isNowBlacklisted
+
+        if (isNowBlacklisted && !settingsManager.isPaused) {
+            // Auto-pause when entering
+            isProgrammaticUpdate = true
+            settingsManager.isPaused = true
+            isProgrammaticUpdate = false
+            autoPaused = true
+            Toast.makeText(this, "EdgeClip paused: Blacklisted app", Toast.LENGTH_SHORT).show()
+        } else if (!isNowBlacklisted && wasBlacklisted && autoPaused && settingsManager.isPaused) {
+            // Auto-resume when leaving if we were the ones who paused it
+            isProgrammaticUpdate = true
+            settingsManager.isPaused = false
+            isProgrammaticUpdate = false
+            autoPaused = false
+            Toast.makeText(this, "EdgeClip resumed", Toast.LENGTH_SHORT).show()
+        } else if (!isNowBlacklisted && autoPaused) {
+            // Relinquish auto-pause control if user manually unpaused while inside
+            autoPaused = false
+        }
+        
+        updateVisibilityState()
     }
 
     private fun updateHandleSide() {
@@ -190,6 +256,28 @@ class EdgeClipService : Service() {
         }
     }
 
+    fun triggerRefresh() {
+        observeClips()
+    }
+
+    fun isHandleVisible(): Boolean {
+        return ::edgeView.isInitialized && edgeView.visibility == View.VISIBLE && edgeView.isAttachedToWindow
+    }
+
+    fun setHandleForceHidden(hidden: Boolean) {
+        if (::edgeView.isInitialized) {
+            edgeView.post {
+                val newVisibility = if (hidden) View.GONE else View.VISIBLE
+                if (edgeView.visibility != newVisibility) {
+                    Log.d(TAG, "Visibility Change: $newVisibility")
+                    edgeView.visibility = newVisibility
+                }
+            }
+        } else {
+            Log.d(TAG, "setHandleForceHidden: edgeView not initialized")
+        }
+    }
+
     // =========================================================================
     // Edge Handle
     // =========================================================================
@@ -294,6 +382,7 @@ class EdgeClipService : Service() {
             panelWidth, panelHeight,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT
         ).also { 
@@ -304,6 +393,16 @@ class EdgeClipService : Service() {
         val panel = buildPanelRoot(panelWidth).also { root ->
             root.addView(buildScrollableContent())
             root.addView(uiManager.buildClearButton())
+            
+            root.setOnTouchListener { _, event ->
+                if (event.action == MotionEvent.ACTION_OUTSIDE) {
+                    if (settingsManager.closeOnOutsideClick) {
+                        closePanel()
+                        return@setOnTouchListener true
+                    }
+                }
+                false
+            }
         }
 
         panelView = panel

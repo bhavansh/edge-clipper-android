@@ -12,6 +12,9 @@ interface ClipDao {
     @Query("SELECT * FROM clip_history ORDER BY isPinned DESC, copiedAt DESC")
     fun observeAll(): Flow<List<ClipEntity>>
 
+    @Query("SELECT * FROM clip_history WHERE text LIKE :query OR subtype LIKE :query ORDER BY isPinned DESC, copiedAt DESC")
+    fun search(query: String): Flow<List<ClipEntity>>
+
     @Query("SELECT * FROM clip_history ORDER BY isPinned DESC, copiedAt DESC")
     suspend fun getAll(): List<ClipEntity>
 
@@ -65,6 +68,21 @@ interface ClipDao {
 
     @Query("DELETE FROM clip_history WHERE isPinned = 0")
     suspend fun clearUnpinned()
+
+    @Query("DELETE FROM clip_history WHERE isPinned = 0 AND copiedAt < :timestamp")
+    suspend fun deleteOlderThan(timestamp: Long)
+
+    @Query("SELECT COUNT(*) FROM clip_history")
+    suspend fun getCount(): Int
+
+    @Query("SELECT COUNT(*) FROM clip_history WHERE type = 'TEXT'")
+    suspend fun getTextCount(): Int
+
+    @Query("SELECT COUNT(*) FROM clip_history WHERE type = 'IMAGE'")
+    suspend fun getImageCount(): Int
+
+    @Query("SELECT imagePath FROM clip_history WHERE isPinned = 0 AND imagePath IS NOT NULL AND copiedAt < :timestamp")
+    suspend fun getOldImagePaths(timestamp: Long): List<String>
 
     @Query("SELECT imagePath FROM clip_history WHERE isPinned = 0 AND imagePath IS NOT NULL")
     suspend fun allUnpinnedImagePaths(): List<String>

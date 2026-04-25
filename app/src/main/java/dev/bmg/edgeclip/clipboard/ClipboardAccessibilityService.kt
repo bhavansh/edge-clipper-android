@@ -12,8 +12,11 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityWindowInfo
+import android.graphics.Rect
 import dev.bmg.edgeclip.data.ClipRepository
 import dev.bmg.edgeclip.data.SettingsManager
+import dev.bmg.edgeclip.service.EdgeClipService
 import dev.bmg.edgeclip.service.ServiceState
 import kotlinx.coroutines.*
 import java.io.ByteArrayOutputStream
@@ -35,7 +38,8 @@ class ClipboardAccessibilityService : AccessibilityService() {
             feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
             eventTypes = AccessibilityEvent.TYPES_ALL_MASK
             notificationTimeout = 100
-            flags = AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS
+            flags = AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS or 
+                    AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
         }
         
         Handler(Looper.getMainLooper()).postDelayed({ initClipboard() }, 300)
@@ -49,7 +53,25 @@ class ClipboardAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (!ServiceState.isServiceRunning.value) return
-        
+
+        // 1. Detect Foreground App
+        if (event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            val pkg = event.packageName?.toString() ?: ""
+            if (pkg.isNotEmpty() && pkg != "android" && pkg != "com.android.systemui") {
+                EdgeClipService.instance?.onPackageFocused(pkg)
+            }
+        }
+
+        // 2. Fullscreen detection
+        if (event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED || 
+            event?.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED) {
+            checkFullscreenState()
+        }
+
+        // 3. Skip if paused
+        // Since Blacklist now automatically sets isPaused = true, we only need to check this.
+        if (SettingsManager(this).isPaused) return
+
         val cm = clipboardManager ?: return
         val clip = cm.primaryClip ?: return
         if (clip.itemCount == 0) return
@@ -73,6 +95,46 @@ class ClipboardAccessibilityService : AccessibilityService() {
         lastStoredText = text
         scope.launch(Dispatchers.IO) { repository?.add(text) }
     }
+    private fun checkFullscreenState() {
+        try {
+            val windowList = windows
+            if (windowList.isEmpty()) return
+
+            var isFullscreenFound = false
+            var isStatusBarVisible = false
+            
+            val displayMetrics = resources.displayMetrics
+            val screenWidth = displayMetrics.widthPixels
+            val screenHeight = displayMetrics.heightPixels
+
+            for (window in windowList) {
+                val rect = Rect()
+                window.getBoundsInScreen(rect)
+                val w = rect.width()
+                val h = rect.height()
+                val windowPackage = try { window.root?.packageName?.toString() } catch (e: Exception) { "unknown" }
+                
+                if (window.type == AccessibilityWindowInfo.TYPE_SYSTEM) {
+                    if (rect.top == 0 && w >= screenWidth && h > 0 && h < screenHeight * 0.15) {
+                        isStatusBarVisible = true
+                    }
+                }
+
+                if (window.type == AccessibilityWindowInfo.TYPE_APPLICATION) {
+                    if (windowPackage == packageName) continue
+                    if (window.isFocused && w >= screenWidth && h >= screenHeight) {
+                        isFullscreenFound = true
+                    }
+                }
+            }
+
+            val finalHideState = isFullscreenFound && !isStatusBarVisible
+            EdgeClipService.instance?.setHandleForceHidden(finalHideState)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking fullscreen state", e)
+        }
+    }
+
     private fun handleImageClip(uri: Uri) {
         val uriString = uri.toString()
         if (isInternalCopy) {
@@ -80,7 +142,7 @@ class ClipboardAccessibilityService : AccessibilityService() {
             lastStoredImageUri = uriString
             return
         }
-        if (uriString == lastStoredImageUri) return  // ← skip if already stored
+        if (uriString == lastStoredImageUri) return
         lastStoredImageUri = uriString
 
         scope.launch(Dispatchers.IO) {
@@ -113,7 +175,6 @@ class ClipboardAccessibilityService : AccessibilityService() {
             inputStream.close()
             if (bitmap == null) return null
 
-            // Scale down if huge — panel is narrow, no need for full res
             val maxDim = 1200
             val scaled = if (bitmap.width > maxDim || bitmap.height > maxDim) {
                 val scale = maxDim.toFloat() / maxOf(bitmap.width, bitmap.height)
@@ -143,11 +204,9 @@ class ClipboardAccessibilityService : AccessibilityService() {
     }
     override fun onInterrupt() {}
 
-    // =========================================================================
-    // Called when panel opens — guaranteed fresh read
-    // =========================================================================
-
     fun readClipboardNow() {
+        if (SettingsManager(this).isPaused) return
+
         val cm = clipboardManager ?: return
         val clip = cm.primaryClip ?: return
         val item = clip.getItemAt(0) ?: return
@@ -170,10 +229,10 @@ class ClipboardAccessibilityService : AccessibilityService() {
         lastStoredText = text
         scope.launch(Dispatchers.IO) { repository?.add(text) }
     }
+
     private fun initClipboard() {
         clipboardManager = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
         repository = ClipRepository.getInstance(this)
-        Log.d(TAG, "Init complete")
         readClipboardNow()
     }
 
@@ -184,9 +243,3 @@ class ClipboardAccessibilityService : AccessibilityService() {
 
     init { instance = this }
 }
-
-
-
-
-
-
