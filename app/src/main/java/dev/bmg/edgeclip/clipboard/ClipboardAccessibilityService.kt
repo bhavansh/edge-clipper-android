@@ -95,40 +95,46 @@ class ClipboardAccessibilityService : AccessibilityService() {
             val screenWidth = displayMetrics.widthPixels
             val screenHeight = displayMetrics.heightPixels
 
+            Log.d(TAG, "FullscreenCheck: Checking ${windowList.size} windows. Screen: ${screenWidth}x${screenHeight}")
+            
             for (window in windowList) {
                 val rect = Rect()
                 window.getBoundsInScreen(rect)
+                val w = rect.width()
+                val h = rect.height()
+                val windowPackage = try { window.root?.packageName?.toString() } catch (e: Exception) { "unknown" }
+                
+                Log.d(TAG, "FullscreenCheck: Window type=${window.type} pkg=$windowPackage bounds=$rect focused=${window.isFocused}")
 
-                // 1. Detect if a Status Bar exists and is at the top
+                // 1. Detect if a Status Bar exists
                 if (window.type == AccessibilityWindowInfo.TYPE_SYSTEM) {
-                    if (rect.top == 0 && rect.width() >= screenWidth && rect.height() > 0 && rect.height() < screenHeight * 0.1) {
+                    // Status bar is usually at the top and spans the width
+                    if (rect.top == 0 && w >= screenWidth && h > 0 && h < screenHeight * 0.15) {
                         isStatusBarVisible = true
+                        Log.d(TAG, "FullscreenCheck: Status Bar detected and visible")
                     }
                 }
 
                 // 2. Check application windows
                 if (window.type == AccessibilityWindowInfo.TYPE_APPLICATION) {
-                    // Ignore our own app
-                    val packageName = try { window.root?.packageName?.toString() } catch (e: Exception) { null }
-                    if (packageName == packageName) {
-                        // We can't easily compare packageName here without context, 
-                        // but we can check if it's the focused window and if it's our app.
-                        // For now, let's rely on the Status Bar detection which is more universal.
+                    // Ignore our own app - if our app is open, we want the handle visible for testing/config
+                    if (windowPackage == packageName) {
+                        Log.d(TAG, "FullscreenCheck: Skipping our own app window")
+                        continue
                     }
 
-                    val w = rect.width()
-                    val h = rect.height()
-                    
-                    // If an app window is exactly screen size, it's a candidate
-                    if (w >= screenWidth && h >= screenHeight) {
+                    // If a focused application window is exactly screen size
+                    if (window.isFocused && w >= screenWidth && h >= screenHeight) {
                         isFullscreenFound = true
+                        Log.d(TAG, "FullscreenCheck: Focused app $windowPackage is covering the screen")
                     }
                 }
             }
 
-            // A window is only truly "Fullscreen Immersive" if it fills the screen 
-            // AND the status bar is NOT visible/taking up space.
+            // The handle should only hide if a focused app is filling the screen 
+            // AND the system status bar is not occupying its usual space.
             val finalHideState = isFullscreenFound && !isStatusBarVisible
+            Log.d(TAG, "FullscreenCheck: Result -> isFullscreen=$isFullscreenFound, isStatusBarVisible=$isStatusBarVisible => HIDE=$finalHideState")
             
             EdgeClipService.instance?.setHandleForceHidden(finalHideState)
         } catch (e: Exception) {
