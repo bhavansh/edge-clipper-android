@@ -70,6 +70,7 @@ class MainActivity : ComponentActivity() {
             var dbLimit by remember { mutableIntStateOf(settingsManager.databaseLimit) }
             var retentionDays by remember { mutableIntStateOf(settingsManager.retentionDays) }
             var closeOutside by remember { mutableStateOf(settingsManager.closeOnOutsideClick) }
+            var blacklistedPackages by remember { mutableStateOf(settingsManager.blacklistedPackages) }
             var storageStats by remember { mutableStateOf<ClipRepository.StorageStats?>(null) }
             
             val scope = rememberCoroutineScope()
@@ -161,6 +162,7 @@ class MainActivity : ComponentActivity() {
                                 retentionDays = retentionDays,
                                 closeOutside = closeOutside,
                                 storageStats = storageStats,
+                                blacklistedPackages = blacklistedPackages,
                                 onBgPollingToggle = {
                                     bgPollingEnabled = it
                                     settingsManager.isBackgroundPollingEnabled = it
@@ -190,6 +192,10 @@ class MainActivity : ComponentActivity() {
                                 onCloseOutsideToggle = {
                                     closeOutside = it
                                     settingsManager.closeOnOutsideClick = it
+                                },
+                                onBlacklistChange = {
+                                    blacklistedPackages = it
+                                    settingsManager.blacklistedPackages = it
                                 },
                                 onRequestOverlay = {
                                     startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
@@ -254,12 +260,14 @@ fun SettingsScreen(
     retentionDays: Int,
     closeOutside: Boolean,
     storageStats: ClipRepository.StorageStats?,
+    blacklistedPackages: Set<String>,
     onBgPollingToggle: (Boolean) -> Unit,
     onPollingFreqChange: (Int) -> Unit,
     onEdgeSideChange: (String) -> Unit,
     onDbLimitChange: (Int) -> Unit,
     onRetentionDaysChange: (Int) -> Unit,
     onCloseOutsideToggle: (Boolean) -> Unit,
+    onBlacklistChange: (Set<String>) -> Unit,
     onRequestOverlay: () -> Unit,
     onRequestAccessibility: () -> Unit,
     onRequestNotification: () -> Unit,
@@ -387,7 +395,20 @@ fun SettingsScreen(
                     Text("Close on outside click", fontSize = 14.sp, modifier = Modifier.weight(1f))
                     Switch(checked = closeOutside, onCheckedChange = onCloseOutsideToggle)
                 }
-                Text("Automatically hide the panel when you tap outside it.", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+
+                Spacer(Modifier.height(8.dp))
+                
+                Button(
+                    onClick = { showBlacklistDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
+                ) {
+                    Icon(painterResource(R.drawable.ic_settings), null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("App Blacklist (${blacklistedPackages.size})")
+                }
+                Text("Selected apps will hide the handle and pause recording.", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
             }
 
             // ── Database & History ──────────────────────────────────────
@@ -480,7 +501,108 @@ fun SettingsScreen(
             }
         )
     }
+
+    if (showBlacklistDialog) {
+        BlacklistDialog(
+            currentBlacklist = blacklistedPackages,
+            onDismiss = { showBlacklistDialog = false },
+            onSave = { 
+                onBlacklistChange(it)
+                showBlacklistDialog = false
+            }
+        )
+    }
 }
+
+@Composable
+fun BlacklistDialog(
+    currentBlacklist: Set<String>,
+    onDismiss: () -> Unit,
+    onSave: (Set<String>) -> Unit
+) {
+    val context = LocalContext.current
+    val pm = context.packageManager
+    var apps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
+    var searchQuery by remember { mutableStateOf("") }
+    val selectedPackages = remember { mutableStateOf(currentBlacklist.toMutableSet()) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            val installedApps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+                .filter { it.flags and ApplicationInfo.FLAG_SYSTEM == 0 || it.packageName == "com.google.android.youtube" }
+                .map { AppInfo(it.loadLabel(pm).toString(), it.packageName, it.loadIcon(pm)) }
+                .sortedBy { it.name }
+            apps = installedApps
+            isLoading = false
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("App Blacklist") },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth().height(400.dp)) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Search apps...") },
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true
+                )
+                
+                if (isLoading) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                } else {
+                    val filteredApps = apps.filter { it.name.contains(searchQuery, ignoreCase = true) || it.packageName.contains(searchQuery, ignoreCase = true) }
+                    LazyColumn(modifier = Modifier.weight(1f)) {
+                        items(filteredApps) { app ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        if (selectedPackages.value.contains(app.packageName)) {
+                                            selectedPackages.value = selectedPackages.value.toMutableSet().apply { remove(app.packageName) }
+                                        } else {
+                                            selectedPackages.value = selectedPackages.value.toMutableSet().apply { add(app.packageName) }
+                                        }
+                                    }
+                                    .padding(vertical = 8.dp)
+                            ) {
+                                Image(
+                                    bitmap = app.icon.toBitmap().asImageBitmap(),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(32.dp)
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(app.name, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                                    Text(app.packageName, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                                }
+                                Checkbox(
+                                    checked = selectedPackages.value.contains(app.packageName),
+                                    onCheckedChange = null
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onSave(selectedPackages.value) }) { Text("Save") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
+}
+
+data class AppInfo(val name: String, val packageName: String, val icon: Drawable)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

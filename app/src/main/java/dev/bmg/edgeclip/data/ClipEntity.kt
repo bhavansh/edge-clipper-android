@@ -13,5 +13,6 @@ data class ClipEntity(
     val text: String? = null,           // null for IMAGE entries
     val imagePath: String? = null,      // null for TEXT entries
     val copiedAt: Long = System.currentTimeMillis(),
-    val isPinned: Boolean = false
-)
+    val isPinned: Boolean = false,
+    val subtype: String = "NONE"        // URL, PHONE, MAPS, OTP
+    )

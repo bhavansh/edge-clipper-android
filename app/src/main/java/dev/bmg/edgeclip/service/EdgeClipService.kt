@@ -43,9 +43,11 @@ class EdgeClipService : Service() {
     private lateinit var focusManager: FocusWindowManager
     private lateinit var settingsManager: SettingsManager
 
-    private val restingWidthDp = 26
-    private val fullWidthDp = 40
+    private var currentFocusedPackage: String? = null
+    private var isBlacklistedAppFocused = false
 
+    private val restingWidthDp = 26
+    ...
     private val settingsListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == SettingsManager.KEY_BG_POLLING || key == SettingsManager.KEY_POLLING_FREQ) {
             if (::focusManager.isInitialized) {
@@ -53,7 +55,33 @@ class EdgeClipService : Service() {
             }
         } else if (key == SettingsManager.KEY_EDGE_SIDE) {
             updateHandleSide()
+        } else if (key == SettingsManager.KEY_IS_PAUSED || key == SettingsManager.KEY_BLACKLIST) {
+            updateVisibilityState()
         }
+    }
+
+    private fun updateVisibilityState() {
+        val isPaused = settingsManager.isPaused
+        val shouldHide = isPaused || isBlacklistedAppFocused
+        setHandleForceHidden(shouldHide)
+
+        if (isPaused) {
+            focusManager.stopPeriodicClipboardPoll()
+        } else {
+            focusManager.restartPolling()
+        }
+    }
+
+    fun onPackageFocused(packageName: String) {
+        currentFocusedPackage = packageName
+        val wasBlacklisted = isBlacklistedAppFocused
+        isBlacklistedAppFocused = settingsManager.blacklistedPackages.contains(packageName)
+
+        if (wasBlacklisted != isBlacklistedAppFocused) {
+            updateVisibilityState()
+        }
+    }
+
     }
 
     private fun updateHandleSide() {
@@ -188,6 +216,10 @@ class EdgeClipService : Service() {
         if (::focusManager.isInitialized) {
             focusManager.triggerFocusRead()
         }
+    }
+
+    fun triggerRefresh() {
+        observeClips()
     }
 
     fun isHandleVisible(): Boolean {

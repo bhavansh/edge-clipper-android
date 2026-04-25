@@ -30,6 +30,14 @@ class SettingsManager(context: Context) {
         get() = prefs.getBoolean(KEY_CLOSE_OUTSIDE, true)
         set(value) = prefs.edit().putBoolean(KEY_CLOSE_OUTSIDE, value).apply()
 
+    var isPaused: Boolean
+        get() = prefs.getBoolean(KEY_IS_PAUSED, false)
+        set(value) = prefs.edit().putBoolean(KEY_IS_PAUSED, value).apply()
+
+    var blacklistedPackages: Set<String>
+        get() = prefs.getStringSet(KEY_BLACKLIST, emptySet()) ?: emptySet()
+        set(value) = prefs.edit().putStringSet(KEY_BLACKLIST, value).apply()
+
     fun registerListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
         prefs.registerOnSharedPreferenceChangeListener(listener)
     }
@@ -45,5 +53,7 @@ class SettingsManager(context: Context) {
         const val KEY_DB_LIMIT = "db_limit"
         const val KEY_RETENTION_DAYS = "retention_days"
         const val KEY_CLOSE_OUTSIDE = "close_outside"
+        const val KEY_IS_PAUSED = "is_paused"
+        const val KEY_BLACKLIST = "blacklisted_packages"
     }
 }

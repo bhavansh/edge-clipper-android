@@ -54,11 +54,20 @@ class ClipboardAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (!ServiceState.isServiceRunning.value) return
 
-        // Fullscreen detection
+        // 1. Package Focus Detection
+        if (event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            val pkg = event.packageName?.toString() ?: ""
+            EdgeClipService.instance?.onPackageFocused(pkg)
+        }
+
+        // 2. Fullscreen detection
         if (event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED || 
             event?.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED) {
             checkFullscreenState()
         }
+
+        // 3. Skip if paused
+        if (SettingsManager(this).isPaused) return
 
         val cm = clipboardManager ?: return
         val clip = cm.primaryClip ?: return

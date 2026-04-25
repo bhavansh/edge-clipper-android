@@ -16,12 +16,37 @@ class ClipRepository private constructor(
     // --- Text ---
     suspend fun add(text: String) {
         if (text.isBlank()) return
+        
+        val detectedSubtype = detectSubtype(text)
+        
         if (dao.existsText(text) > 0) {
             dao.updateTimestamp(text)
         } else {
-            dao.insert(ClipEntity(type = ClipType.TEXT, text = text))
+            dao.insert(ClipEntity(
+                type = ClipType.TEXT, 
+                text = text,
+                subtype = detectedSubtype
+            ))
             evictOldRecords()
         }
+    }
+
+    private fun detectSubtype(text: String): String {
+        val trimmed = text.trim()
+        
+        // 1. URL Detection
+        val urlRegex = Regex("^(https?|ftp|file)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]", RegexOption.IGNORE_CASE)
+        if (urlRegex.containsMatchIn(trimmed)) return "URL"
+        
+        // 2. OTP Detection (4-8 consecutive digits)
+        val otpRegex = Regex("\\b\\d{4,8}\\b")
+        if (otpRegex.containsMatchIn(trimmed)) return "OTP"
+        
+        // 3. Phone Detection
+        val phoneRegex = Regex("(\\+\\d{1,3}[- ]?)?\\d{10}")
+        if (phoneRegex.containsMatchIn(trimmed)) return "PHONE"
+        
+        return "NONE"
     }
 
     // --- Image ---
@@ -119,6 +144,7 @@ class ClipRepository private constructor(
 
     suspend fun setPinned(id: Long, pinned: Boolean) = dao.setPinned(id, pinned)
     suspend fun getAll(): List<ClipEntity> = dao.getAll()
+    fun search(query: String): Flow<List<ClipEntity>> = dao.search("%$query%")
 
     companion object {
         @Volatile private var INSTANCE: ClipRepository? = null

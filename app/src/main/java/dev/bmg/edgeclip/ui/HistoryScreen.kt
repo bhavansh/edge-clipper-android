@@ -34,9 +34,21 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+import androidx.compose.material3.*
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Clear
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryScreen(repository: ClipRepository, storageStats: ClipRepository.StorageStats?) {
-    val clips by repository.clips.collectAsState(initial = emptyList())
+    var searchQuery by remember { mutableStateOf("") }
+    val clips by (if (searchQuery.isBlank()) repository.clips else repository.search(searchQuery))
+        .collectAsState(initial = emptyList())
+    
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -58,49 +70,62 @@ fun HistoryScreen(repository: ClipRepository, storageStats: ClipRepository.Stora
                 text = "$sizeMb  ·  ${stats.totalCount} items",
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                modifier = Modifier.padding(bottom = 16.dp)
+                modifier = Modifier.padding(bottom = 8.dp)
             )
         }
 
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
+            placeholder = { Text("Search history...") },
+            leadingIcon = { Icon(Icons.Default.Search, null) },
+            trailingIcon = {
+                if (searchQuery.isNotEmpty()) {
+                    IconButton(onClick = { searchQuery = "" }) {
+                        Icon(Icons.Default.Clear, null)
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+            )
+        )
+
         if (clips.isEmpty()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No items found", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+            Box(Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {
+                Text(if (searchQuery.isEmpty()) "No items found" else "No results for \"$searchQuery\"", 
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
             }
         } else {
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 80.dp)
+                modifier = Modifier.fillMaxSize().weight(1f),
+                contentPadding = PaddingValues(bottom = 20.dp)
             ) {
                 itemsIndexed(clips, key = { _, clip -> clip.id }) { index, clip ->
                     var showCopied by remember { mutableStateOf(false) }
                     
-                    ClipItem(
-                        clip = clip,
-                        index = index + 1,
-                        onDelete = { scope.launch { repository.delete(clip) } },
-                        onCopy = {
-                            val cm = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                            dev.bmg.edgeclip.clipboard.ClipboardAccessibilityService.instance?.isInternalCopy = true
-                            
-                            if (clip.type == ClipType.TEXT) {
-                                cm.setPrimaryClip(android.content.ClipData.newPlainText("clip", clip.text))
-                            } else {
-                                clip.imagePath?.let { path ->
-                                    val file = File(path)
-                                    val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-                                    cm.setPrimaryClip(android.content.ClipData.newUri(context.contentResolver, "image", uri))
+                    SwipeToDeleteContainer(
+                        onDelete = { scope.launch { repository.delete(clip) } }
+                    ) {
+                        ClipItem(
+                            clip = clip,
+                            index = index + 1,
+                            onDelete = { scope.launch { repository.delete(clip) } },
+                            onCopy = {
+                                copyToClipboard(context, clip)
+                                showCopied = true
+                                scope.launch {
+                                    kotlinx.coroutines.delay(1500)
+                                    showCopied = false
                                 }
-                            }
-                            
-                            showCopied = true
-                            scope.launch {
-                                kotlinx.coroutines.delay(1500)
-                                showCopied = false
-                            }
-                        },
-                        showCopied = showCopied
-                    )
+                            },
+                            showCopied = showCopied
+                        )
+                    }
                 }
                 item {
                     Spacer(Modifier.height(16.dp))
@@ -115,6 +140,58 @@ fun HistoryScreen(repository: ClipRepository, storageStats: ClipRepository.Stora
                     Spacer(Modifier.height(16.dp))
                 }
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SwipeToDeleteContainer(
+    onDelete: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    val state = rememberSwipeToDismissBoxState(
+        confirmValueChange = {
+            if (it == SwipeToDismissBoxValue.EndToStart) {
+                onDelete()
+                true
+            } else false
+        }
+    )
+
+    SwipeToDismissBox(
+        state = state,
+        enableDismissFromStartToEnd = false,
+        backgroundContent = {
+            val color = if (state.dismissDirection == SwipeToDismissBoxValue.EndToStart) {
+                Color(0xFFFF3B30).copy(alpha = 0.8f)
+            } else Color.Transparent
+            
+            Box(
+                Modifier.fillMaxSize()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(color)
+                    .padding(horizontal = 20.dp),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                Icon(painterResource(R.drawable.ic_close), null, tint = Color.White)
+            }
+        },
+        content = { content() }
+    )
+}
+
+private fun copyToClipboard(context: android.content.Context, clip: ClipEntity) {
+    val cm = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+    dev.bmg.edgeclip.clipboard.ClipboardAccessibilityService.instance?.isInternalCopy = true
+    
+    if (clip.type == dev.bmg.edgeclip.data.ClipType.TEXT) {
+        cm.setPrimaryClip(android.content.ClipData.newPlainText("clip", clip.text))
+    } else {
+        clip.imagePath?.let { path ->
+            val file = File(path)
+            val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+            cm.setPrimaryClip(android.content.ClipData.newUri(context.contentResolver, "image", uri))
         }
     }
 }
@@ -200,6 +277,51 @@ fun ClipItem(clip: ClipEntity, index: Int, onDelete: () -> Unit, onCopy: () -> U
                     .fillMaxWidth()
                     .height(44.dp)
             ) {
+                // 1. Contextual Action Icon
+                if (clip.subtype != "NONE") {
+                    IconButton(
+                        onClick = { 
+                            val text = clip.text ?: ""
+                            val context = context
+                            try {
+                                val intent = when (clip.subtype) {
+                                    "URL" -> android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(text))
+                                    "PHONE" -> android.content.Intent(android.content.Intent.ACTION_DIAL, android.net.Uri.parse("tel:$text"))
+                                    "OTP" -> {
+                                        val digits = Regex("\\d{4,8}").find(text)?.value ?: text
+                                        copyToClipboard(context, clip.copy(text = digits))
+                                        android.widget.Toast.makeText(context, "OTP Copied", android.widget.Toast.LENGTH_SHORT).show()
+                                        null
+                                    }
+                                    else -> null
+                                }
+                                intent?.let {
+                                    it.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    context.startActivity(it)
+                                }
+                            } catch (e: Exception) {}
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        val iconRes = when (clip.subtype) {
+                            "URL" -> R.drawable.ic_web
+                            "PHONE" -> R.drawable.ic_call
+                            "OTP" -> R.drawable.ic_check
+                            else -> 0
+                        }
+                        if (iconRes != 0) {
+                            Icon(
+                                painter = painterResource(iconRes),
+                                contentDescription = "Action",
+                                tint = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                    
+                    Box(Modifier.width(1.dp).fillMaxHeight().background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f)))
+                }
+
                 IconButton(
                     onClick = onCopy,
                     modifier = Modifier.weight(1f)
