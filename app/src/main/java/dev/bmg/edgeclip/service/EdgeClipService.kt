@@ -294,6 +294,7 @@ class EdgeClipService : Service() {
             panelWidth, panelHeight,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT
         ).also { 
@@ -304,6 +305,16 @@ class EdgeClipService : Service() {
         val panel = buildPanelRoot(panelWidth).also { root ->
             root.addView(buildScrollableContent())
             root.addView(uiManager.buildClearButton())
+            
+            root.setOnTouchListener { _, event ->
+                if (event.action == MotionEvent.ACTION_OUTSIDE) {
+                    if (settingsManager.closeOnOutsideClick) {
+                        closePanel()
+                        return@setOnTouchListener true
+                    }
+                }
+                false
+            }
         }
 
         panelView = panel

@@ -11,6 +11,7 @@ class ClipRepository private constructor(
     private val context: Context
 ) {
     val clips: Flow<List<ClipEntity>> = dao.observeAll()
+    private val settings = SettingsManager(context)
 
     // --- Text ---
     suspend fun add(text: String) {
@@ -19,13 +20,11 @@ class ClipRepository private constructor(
             dao.updateTimestamp(text)
         } else {
             dao.insert(ClipEntity(type = ClipType.TEXT, text = text))
-            dao.evictBeyondCap()
+            evictOldRecords()
         }
     }
 
     // --- Image ---
-    // Call this from the accessibility service with a compressed byte array.
-    // Returns the saved file path, or null on failure.
     suspend fun addImage(bytes: ByteArray, extension: String = "jpg"): String? {
         val hash = MessageDigest.getInstance("MD5")
             .digest(bytes)
@@ -42,7 +41,7 @@ class ClipRepository private constructor(
                 dao.updateTimestampImage(path)
             } else {
                 dao.insert(ClipEntity(type = ClipType.IMAGE, imagePath = path))
-                evictOldImages()
+                evictOldRecords()
             }
             path
         } catch (e: Exception) {
@@ -51,10 +50,64 @@ class ClipRepository private constructor(
         }
     }
 
-    private suspend fun evictOldImages(cap: Int = 50) {
+    private suspend fun evictOldRecords() {
+        val cap = settings.databaseLimit
         val paths = dao.evictedImagePaths(cap)
         paths.forEach { File(it).delete() }
         dao.evictBeyondCap(cap)
+        
+        // Also cleanup by time if enabled
+        val days = settings.retentionDays
+        if (days > 0) {
+            val ms = if (days == 5) {
+                5 * 60 * 1000L // 5 minutes for testing
+            } else {
+                days * 24 * 60 * 60 * 1000L
+            }
+            val cutoff = System.currentTimeMillis() - ms
+            val oldPaths = dao.getOldImagePaths(cutoff)
+            oldPaths.forEach { File(it).delete() }
+            dao.deleteOlderThan(cutoff)
+        }
+    }
+
+    suspend fun pruneToLimit(newLimit: Int) {
+        val paths = dao.evictedImagePaths(newLimit)
+        paths.forEach { File(it).delete() }
+        dao.evictBeyondCap(newLimit)
+    }
+
+    fun getDatabaseSize(): Long {
+        var totalSize = 0L
+        
+        // 1. Database file size
+        val dbFile = context.getDatabasePath("clip_history.db")
+        if (dbFile.exists()) totalSize += dbFile.length()
+        
+        // 2. Images directory size
+        context.filesDir.listFiles()?.forEach { file ->
+            if (file.name.startsWith("clip_img_")) {
+                totalSize += file.length()
+            }
+        }
+        
+        return totalSize
+    }
+
+    data class StorageStats(
+        val totalSize: Long,
+        val totalCount: Int,
+        val textCount: Int,
+        val imageCount: Int
+    )
+
+    suspend fun getStorageStats(): StorageStats {
+        return StorageStats(
+            totalSize = getDatabaseSize(),
+            totalCount = dao.getCount(),
+            textCount = dao.getTextCount(),
+            imageCount = dao.getImageCount()
+        )
     }
 
     suspend fun delete(clip: ClipEntity) {

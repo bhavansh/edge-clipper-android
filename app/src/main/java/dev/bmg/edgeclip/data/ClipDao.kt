@@ -66,6 +66,21 @@ interface ClipDao {
     @Query("DELETE FROM clip_history WHERE isPinned = 0")
     suspend fun clearUnpinned()
 
+    @Query("DELETE FROM clip_history WHERE isPinned = 0 AND copiedAt < :timestamp")
+    suspend fun deleteOlderThan(timestamp: Long)
+
+    @Query("SELECT COUNT(*) FROM clip_history")
+    suspend fun getCount(): Int
+
+    @Query("SELECT COUNT(*) FROM clip_history WHERE type = 'TEXT'")
+    suspend fun getTextCount(): Int
+
+    @Query("SELECT COUNT(*) FROM clip_history WHERE type = 'IMAGE'")
+    suspend fun getImageCount(): Int
+
+    @Query("SELECT imagePath FROM clip_history WHERE isPinned = 0 AND imagePath IS NOT NULL AND copiedAt < :timestamp")
+    suspend fun getOldImagePaths(timestamp: Long): List<String>
+
     @Query("SELECT imagePath FROM clip_history WHERE isPinned = 0 AND imagePath IS NOT NULL")
     suspend fun allUnpinnedImagePaths(): List<String>
 

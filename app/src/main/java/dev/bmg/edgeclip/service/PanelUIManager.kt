@@ -108,22 +108,24 @@ class PanelUIManager(
         setBackgroundColor(ContextCompat.getColor(context, R.color.action_bar_bg))
         gravity = Gravity.CENTER_VERTICAL
 
-        // Copy Button
-        val copyBtn = TextView(context).apply {
-            text = "Copy"
-            textSize = 12f
-            setTextColor(ContextCompat.getColor(context, R.color.text_primary))
-            gravity = Gravity.CENTER
+        // Copy Button (Icon)
+        val copyBtn = ImageView(context).apply {
+            setImageResource(R.drawable.ic_copy)
+            scaleType = ImageView.ScaleType.CENTER_INSIDE
+            val tint = ContextCompat.getColor(context, R.color.text_primary)
+            setColorFilter(tint)
+            
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f)
             setOnClickListener {
                 performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                 if (clip.type == ClipType.TEXT) onCopyText(clip.text!!) else onCopyImage(clip)
                 
-                text = "Copied ✓"
-                setTextColor(ContextCompat.getColor(context, R.color.pill_text_success))
+                setImageResource(R.drawable.ic_check)
+                setColorFilter(ContextCompat.getColor(context, R.color.pill_text_success))
+                
                 postDelayed({
-                    text = "Copy"
-                    setTextColor(ContextCompat.getColor(context, R.color.text_primary))
+                    setImageResource(R.drawable.ic_copy)
+                    setColorFilter(tint)
                 }, 1500)
             }
         }
@@ -134,12 +136,11 @@ class PanelUIManager(
             setBackgroundColor(ContextCompat.getColor(context, R.color.divider))
         }
 
-        // Delete Button
-        val deleteBtn = TextView(context).apply {
-            text = "✕"
-            textSize = 14f
-            setTextColor(ContextCompat.getColor(context, R.color.pill_text_danger))
-            gravity = Gravity.CENTER
+        // Delete Button (Icon)
+        val deleteBtn = ImageView(context).apply {
+            setImageResource(R.drawable.ic_close)
+            scaleType = ImageView.ScaleType.CENTER_INSIDE
+            setColorFilter(ContextCompat.getColor(context, R.color.pill_text_danger))
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f)
             setOnClickListener {
                 performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)

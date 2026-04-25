@@ -18,6 +18,18 @@ class SettingsManager(context: Context) {
         get() = prefs.getString(KEY_EDGE_SIDE, "right") ?: "right"
         set(value) = prefs.edit().putString(KEY_EDGE_SIDE, value).apply()
 
+    var databaseLimit: Int
+        get() = prefs.getInt(KEY_DB_LIMIT, 50)
+        set(value) = prefs.edit().putInt(KEY_DB_LIMIT, value).apply()
+
+    var retentionDays: Int
+        get() = prefs.getInt(KEY_RETENTION_DAYS, 0)
+        set(value) = prefs.edit().putInt(KEY_RETENTION_DAYS, value).apply()
+
+    var closeOnOutsideClick: Boolean
+        get() = prefs.getBoolean(KEY_CLOSE_OUTSIDE, true)
+        set(value) = prefs.edit().putBoolean(KEY_CLOSE_OUTSIDE, value).apply()
+
     fun registerListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
         prefs.registerOnSharedPreferenceChangeListener(listener)
     }
@@ -30,5 +42,8 @@ class SettingsManager(context: Context) {
         const val KEY_BG_POLLING = "background_polling"
         const val KEY_POLLING_FREQ = "polling_frequency"
         const val KEY_EDGE_SIDE = "edge_side"
+        const val KEY_DB_LIMIT = "db_limit"
+        const val KEY_RETENTION_DAYS = "retention_days"
+        const val KEY_CLOSE_OUTSIDE = "close_outside"
     }
 }
