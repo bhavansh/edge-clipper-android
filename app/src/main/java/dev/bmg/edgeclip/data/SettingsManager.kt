@@ -38,6 +38,10 @@ class SettingsManager(context: Context) {
         get() = prefs.getStringSet(KEY_BLACKLIST, emptySet()) ?: emptySet()
         set(value) = prefs.edit().putStringSet(KEY_BLACKLIST, value).apply()
 
+    var isSmsReaderEnabled: Boolean
+        get() = prefs.getBoolean(KEY_SMS_READER, false)
+        set(value) = prefs.edit().putBoolean(KEY_SMS_READER, value).apply()
+
     fun registerListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
         prefs.registerOnSharedPreferenceChangeListener(listener)
     }
@@ -55,5 +59,6 @@ class SettingsManager(context: Context) {
         const val KEY_CLOSE_OUTSIDE = "close_outside"
         const val KEY_IS_PAUSED = "is_paused"
         const val KEY_BLACKLIST = "blacklisted_packages"
+        const val KEY_SMS_READER = "sms_reader_enabled"
     }
 }

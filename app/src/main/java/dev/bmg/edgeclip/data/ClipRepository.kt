@@ -31,18 +31,14 @@ class ClipRepository private constructor(
         }
     }
 
-    private fun detectSubtype(text: String): String {
+    fun detectSubtype(text: String): String {
         val trimmed = text.trim()
         
         // 1. URL Detection
         val urlRegex = Regex("^(https?|ftp|file)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]", RegexOption.IGNORE_CASE)
         if (urlRegex.containsMatchIn(trimmed)) return "URL"
         
-        // 2. Phone Detection
-        val phoneRegex = Regex("(?:\\+?\\d{1,3}[- ]?)?\\d{3,5}[- ]?\\d{3,5}(?:[- ]?\\d{1,5})?")
-        if (phoneRegex.containsMatchIn(trimmed)) return "PHONE"
-        
-        // 3. OTP Detection (4-8 digits, no decimals)
+        // 2. OTP Detection (4-8 digits, no decimals)
         val otpRegex = Regex("(?<![\\d.])\\d{4,8}(?![\\d.])")
         val otpMatch = otpRegex.find(trimmed)
         if (otpMatch != null) {
@@ -53,6 +49,10 @@ class ClipRepository private constructor(
             // It's an OTP if it's the ONLY thing in the string OR it has a context keyword
             if (trimmed == otpValue || hasKeyword) return "OTP"
         }
+
+        // 3. Phone Detection
+        val phoneRegex = Regex("(?:\\+?\\d{1,3}[- ]?)?\\d{3,5}[- ]?\\d{3,5}(?:[- ]?\\d{1,5})?")
+        if (phoneRegex.containsMatchIn(trimmed)) return "PHONE"
         
         return "NONE"
     }
@@ -153,6 +153,7 @@ class ClipRepository private constructor(
     suspend fun setPinned(id: Long, pinned: Boolean) = dao.setPinned(id, pinned)
     suspend fun getAll(): List<ClipEntity> = dao.getAll()
     fun search(query: String): Flow<List<ClipEntity>> = dao.search("%$query%")
+    fun searchByDateRange(start: Long, end: Long): Flow<List<ClipEntity>> = dao.searchByDateRange(start, end)
 
     companion object {
         @Volatile private var INSTANCE: ClipRepository? = null

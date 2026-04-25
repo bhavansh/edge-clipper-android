@@ -77,6 +77,7 @@ class MainActivity : ComponentActivity() {
             var closeOutside by remember { mutableStateOf(settingsManager.closeOnOutsideClick) }
             var blacklistedPackages by remember { mutableStateOf(settingsManager.blacklistedPackages) }
             var isPaused by remember { mutableStateOf(settingsManager.isPaused) }
+            var isSmsEnabled by remember { mutableStateOf(settingsManager.isSmsReaderEnabled) }
             var storageStats by remember { mutableStateOf<ClipRepository.StorageStats?>(null) }
             
             val scope = rememberCoroutineScope()
@@ -100,6 +101,14 @@ class MainActivity : ComponentActivity() {
             // Recheck permissions every time screen resumes
             var hasOverlay by remember { mutableStateOf(Settings.canDrawOverlays(this)) }
             var hasA11y by remember { mutableStateOf(isAccessibilityEnabled()) }
+            var hasSmsPermission by remember {
+                mutableStateOf(
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.RECEIVE_SMS
+                    ) == PackageManager.PERMISSION_GRANTED
+                )
+            }
             var hasNotificationPermission by remember {
                 mutableStateOf(
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -117,12 +126,27 @@ class MainActivity : ComponentActivity() {
                 hasNotificationPermission = isGranted
             }
 
+            val smsPermissionLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.RequestPermission()
+            ) { isGranted ->
+                hasSmsPermission = isGranted
+                if (!isGranted) {
+                    isSmsEnabled = false
+                    settingsManager.isSmsReaderEnabled = false
+                }
+            }
+
             DisposableEffect(Unit) {
                 val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
                     if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                         hasOverlay = Settings.canDrawOverlays(this@MainActivity)
                         hasA11y = isAccessibilityEnabled()
+                        hasSmsPermission = ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.RECEIVE_SMS
+                        ) == PackageManager.PERMISSION_GRANTED
                         isPaused = settingsManager.isPaused
+                        isSmsEnabled = settingsManager.isSmsReaderEnabled
                         scope.launch(Dispatchers.IO) {
                             storageStats = repository.getStorageStats()
                         }
@@ -162,6 +186,7 @@ class MainActivity : ComponentActivity() {
                                 hasOverlayPermission = hasOverlay,
                                 hasAccessibilityPermission = hasA11y,
                                 hasNotificationPermission = hasNotificationPermission,
+                                hasSmsPermission = hasSmsPermission,
                                 bgPollingEnabled = bgPollingEnabled,
                                 pollingFreq = pollingFreq,
                                 edgeSide = edgeSide,
@@ -169,12 +194,17 @@ class MainActivity : ComponentActivity() {
                                 retentionDays = retentionDays,
                                 closeOutside = closeOutside,
                                 isPaused = isPaused,
+                                isSmsEnabled = isSmsEnabled,
                                 storageStats = storageStats,
                                 blacklistedPackages = blacklistedPackages,
                                 onPauseToggle = {
                                     isPaused = it
                                     settingsManager.isPaused = it
                                     EdgeClipService.instance?.triggerRefresh()
+                                },
+                                onSmsToggle = {
+                                    isSmsEnabled = it
+                                    settingsManager.isSmsReaderEnabled = it
                                 },
                                 onBgPollingToggle = {
                                     bgPollingEnabled = it
@@ -221,6 +251,9 @@ class MainActivity : ComponentActivity() {
                                         permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                                     }
                                 },
+                                onRequestSms = {
+                                    smsPermissionLauncher.launch(Manifest.permission.RECEIVE_SMS)
+                                },
                                 onStartClick = {
                                     val intent = Intent(this@MainActivity, EdgeClipService::class.java)
                                     ContextCompat.startForegroundService(this@MainActivity, intent)
@@ -266,6 +299,7 @@ fun SettingsScreen(
     hasOverlayPermission: Boolean,
     hasAccessibilityPermission: Boolean,
     hasNotificationPermission: Boolean,
+    hasSmsPermission: Boolean,
     bgPollingEnabled: Boolean,
     pollingFreq: Float,
     edgeSide: String,
@@ -273,9 +307,11 @@ fun SettingsScreen(
     retentionDays: Int,
     closeOutside: Boolean,
     isPaused: Boolean,
+    isSmsEnabled: Boolean,
     storageStats: ClipRepository.StorageStats?,
     blacklistedPackages: Set<String>,
     onPauseToggle: (Boolean) -> Unit,
+    onSmsToggle: (Boolean) -> Unit,
     onBgPollingToggle: (Boolean) -> Unit,
     onPollingFreqChange: (Int) -> Unit,
     onEdgeSideChange: (String) -> Unit,
@@ -286,6 +322,7 @@ fun SettingsScreen(
     onRequestOverlay: () -> Unit,
     onRequestAccessibility: () -> Unit,
     onRequestNotification: () -> Unit,
+    onRequestSms: () -> Unit,
     onStartClick: () -> Unit,
     onStopClick: () -> Unit,
     isRunning: Boolean
@@ -377,6 +414,7 @@ fun SettingsScreen(
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     PermissionRow(label = "Notifications", granted = hasNotificationPermission, onGrant = onRequestNotification)
                 }
+                PermissionRow(label = "SMS (Optional for OTP)", granted = hasSmsPermission, onGrant = onRequestSms)
             }
 
             // ── General Settings card ──────────────────────────────────
@@ -390,6 +428,19 @@ fun SettingsScreen(
                         Text("Stop recording clipboard clips temporarily", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
                     }
                     Switch(checked = isPaused, onCheckedChange = onPauseToggle)
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Read SMS OTPs", fontSize = 14.sp)
+                        Text("Automatically capture OTPs from incoming messages", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                    }
+                    Switch(
+                        checked = isSmsEnabled,
+                        onCheckedChange = { if (it && !hasSmsPermission) onRequestSms() else onSmsToggle(it) }
+                    )
                 }
             }
 
