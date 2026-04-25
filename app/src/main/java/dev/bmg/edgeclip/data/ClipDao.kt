@@ -15,6 +15,9 @@ interface ClipDao {
     @Query("SELECT * FROM clip_history WHERE text LIKE :query OR subtype LIKE :query ORDER BY isPinned DESC, copiedAt DESC")
     fun search(query: String): Flow<List<ClipEntity>>
 
+    @Query("SELECT * FROM clip_history WHERE copiedAt BETWEEN :start AND :end ORDER BY isPinned DESC, copiedAt DESC")
+    fun searchByDateRange(start: Long, end: Long): Flow<List<ClipEntity>>
+
     @Query("SELECT * FROM clip_history ORDER BY isPinned DESC, copiedAt DESC")
     suspend fun getAll(): List<ClipEntity>
 

@@ -40,6 +40,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -48,32 +49,108 @@ import java.util.Locale
 fun HistoryScreen(repository: ClipRepository, storageStats: ClipRepository.StorageStats?) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("ALL") }
+    var selectedDateFilter by remember { mutableStateOf("Anytime") }
     
-    val clips by (if (searchQuery.isBlank()) repository.clips else repository.search(searchQuery))
-        .collectAsState(initial = emptyList())
+    val dateRange = remember(selectedDateFilter) {
+        val cal = Calendar.getInstance()
+        val end = cal.timeInMillis
+        
+        when (selectedDateFilter) {
+            "Today" -> {
+                cal.set(Calendar.HOUR_OF_DAY, 0)
+                cal.set(Calendar.MINUTE, 0)
+                cal.set(Calendar.SECOND, 0)
+                cal.set(Calendar.MILLISECOND, 0)
+                cal.timeInMillis to end
+            }
+            "Yesterday" -> {
+                cal.add(Calendar.DAY_OF_YEAR, -1)
+                cal.set(Calendar.HOUR_OF_DAY, 0)
+                cal.set(Calendar.MINUTE, 0)
+                cal.set(Calendar.SECOND, 0)
+                cal.set(Calendar.MILLISECOND, 0)
+                val start = cal.timeInMillis
+                cal.set(Calendar.HOUR_OF_DAY, 23)
+                cal.set(Calendar.MINUTE, 59)
+                cal.set(Calendar.SECOND, 59)
+                cal.set(Calendar.MILLISECOND, 999)
+                start to cal.timeInMillis
+            }
+            "Last 7 Days" -> {
+                cal.add(Calendar.DAY_OF_YEAR, -7)
+                cal.set(Calendar.HOUR_OF_DAY, 0)
+                cal.set(Calendar.MINUTE, 0)
+                cal.set(Calendar.SECOND, 0)
+                cal.set(Calendar.MILLISECOND, 0)
+                cal.timeInMillis to end
+            }
+            else -> null
+        }
+    }
+
+    val clips by (if (dateRange != null) {
+        repository.searchByDateRange(dateRange.first, dateRange.second)
+    } else if (searchQuery.isBlank()) {
+        repository.clips
+    } else {
+        repository.search(searchQuery)
+    }).collectAsState(initial = emptyList())
     
-    val filteredClips = remember(clips, selectedFilter) {
+    val filteredClips = remember(clips, selectedFilter, searchQuery, dateRange) {
+        val base = if (dateRange != null && searchQuery.isNotBlank()) {
+            clips.filter { it.text?.contains(searchQuery, ignoreCase = true) == true || it.subtype?.contains(searchQuery, ignoreCase = true) == true }
+        } else clips
+
         when (selectedFilter) {
-            "ALL" -> clips
-            "IMAGE" -> clips.filter { it.type == ClipType.IMAGE }
-            else -> clips.filter { it.subtype == selectedFilter }
+            "ALL" -> base
+            "IMAGE" -> base.filter { it.type == ClipType.IMAGE }
+            else -> base.filter { it.subtype == selectedFilter }
         }
     }
     
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    var showInfoDialog by remember { mutableStateOf(false) }
+
+    if (showInfoDialog) {
+        AlertDialog(
+            onDismissRequest = { showInfoDialog = false },
+            title = { Text("Search Tips") },
+            text = {
+                Text("• You can filter history by content type (URL, OTP, etc.).\n" +
+                     "• Use Date chips to find items from Today, Yesterday, or the Last 7 Days.\n" +
+                     "• Image clips can be filtered by date ranges even if they don't have text content.")
+            },
+            confirmButton = {
+                TextButton(onClick = { showInfoDialog = false }) { Text("Got it") }
+            }
+        )
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp)
     ) {
-        Text(
-            "Clipboard History",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(top = 24.dp)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 24.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                "Clipboard History",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold
+            )
+            IconButton(onClick = { showInfoDialog = true }) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_search),
+                    contentDescription = "Search Info",
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
         
         storageStats?.let { stats ->
             val sizeMb = String.format(Locale.US, "%.2f MB", stats.totalSize / (1024f * 1024f))
@@ -105,6 +182,24 @@ fun HistoryScreen(repository: ClipRepository, storageStats: ClipRepository.Stora
             )
         )
 
+        val dateFilters = listOf("Anytime", "Today", "Yesterday", "Last 7 Days")
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp)
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            for (date in dateFilters) {
+                FilterChip(
+                    selected = selectedDateFilter == date,
+                    onClick = { selectedDateFilter = date },
+                    label = { Text(date, fontSize = 11.sp) },
+                    shape = RoundedCornerShape(12.dp)
+                )
+            }
+        }
+
         val filterTypes = listOf("ALL", "URL", "PHONE", "OTP", "IMAGE")
         Row(
             modifier = Modifier
@@ -113,7 +208,7 @@ fun HistoryScreen(repository: ClipRepository, storageStats: ClipRepository.Stora
                 .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            filterTypes.forEach { type ->
+            for (type in filterTypes) {
                 FilterChip(
                     selected = selectedFilter == type,
                     onClick = { selectedFilter = type },
