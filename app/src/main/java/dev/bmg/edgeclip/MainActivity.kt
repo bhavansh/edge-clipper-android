@@ -75,12 +75,18 @@ class MainActivity : ComponentActivity() {
             val scope = rememberCoroutineScope()
             
             LaunchedEffect(Unit) {
+                // Initial routing logic
+                val isServiceActive = ServiceState.isServiceRunning.value
+                val isHandleVisible = EdgeClipService.instance?.isHandleVisible() ?: false
+                
+                if (!isServiceActive || !isHandleVisible) {
+                    selectedTab = 1 // Start on Settings
+                } else {
+                    selectedTab = 0 // Start on History
+                }
+                
                 withContext(Dispatchers.IO) {
-                    val stats = repository.getStorageStats()
-                    storageStats = stats
-                    if (stats.totalCount == 0) {
-                        selectedTab = 1
-                    }
+                    storageStats = repository.getStorageStats()
                 }
             }
 
