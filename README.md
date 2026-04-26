@@ -35,13 +35,19 @@ This project demonstrates expertise in:
 
 ## 📸 Visual Overview
 
-| Smart Edge Panel | Media & Links | Smart History |
-|:---:|:---:|:---:|
-| ![Edge Panel](screenshots/edge_panel_otp.jpg) | ![Media & Links](screenshots/edge_panel_media.jpg) | ![Smart History](screenshots/history_main.jpg) |
+### Core Experience
+Access your history instantly with the Edge Panel. Smart detection highlights OTPs, URLs, and images.
 
-| Permissions Setup | Advanced Settings | Overlay Config |
-|:---:|:---:|:---:|
-| ![Permissions Setup](screenshots/settings_permissions.jpg) | ![Advanced Settings](screenshots/settings_db.jpg) | ![Overlay Config](screenshots/settings_overlay.jpg) |
+| Multi-Content Support | Image Capture Demo | OTP Filtering | Smart History |
+|:---:|:---:|:---:|:---:|
+| ![Edge Panel](screenshots/edge_panel_all.jpg) | ![Image Capture](screenshots/image_capture_demo.jpg) | ![OTP Filter](screenshots/edge_panel_otp.jpg) | ![History Screen](screenshots/history_main.jpg) |
+
+### Settings & Configuration
+Deep system integration with a focus on user control and clear permission management.
+
+| Main Settings | Permission Setup | Overlay Config | Database & Privacy |
+|:---:|:---:|:---:|:---:|
+| ![Settings Main](screenshots/settings_main.jpg) | ![Permissions](screenshots/settings_permissions.jpg) | ![Overlay Setup](screenshots/settings_overlay.jpg) | ![Database Settings](screenshots/settings_db.jpg) |
 
 ---
 
