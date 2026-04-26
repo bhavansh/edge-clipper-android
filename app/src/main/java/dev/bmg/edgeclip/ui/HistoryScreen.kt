@@ -373,7 +373,7 @@ fun ClipItem(clip: ClipEntity, index: Int, onDelete: () -> Unit, onCopy: () -> U
                             
                             when (clip.subtype) {
                                 "OTP" -> {
-                                    val regex = Regex("(?<![\\d.])\\d{4,8}(?![\\d.])")
+                                    val regex = Regex("(?<![\\d.])\\b\\d{4,8}\\b(?!\\.[\\d])")
                                     regex.find(text)?.let { match ->
                                         addStyle(
                                             style = SpanStyle(color = otpColor, fontWeight = FontWeight.Bold),
@@ -447,7 +447,7 @@ fun ClipItem(clip: ClipEntity, index: Int, onDelete: () -> Unit, onCopy: () -> U
                                     "URL" -> android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(text))
                                     "PHONE" -> android.content.Intent(android.content.Intent.ACTION_DIAL, android.net.Uri.parse("tel:$text"))
                                     "OTP" -> {
-                                        val digits = Regex("\\d{4,8}").find(text)?.value ?: text
+                                        val digits = Regex("(?<![\\d.])\\b\\d{4,8}\\b(?!\\.[\\d])").find(text)?.value ?: text
                                         copyToClipboard(context, clip.copy(text = digits))
                                         android.widget.Toast.makeText(context, "OTP Copied", android.widget.Toast.LENGTH_SHORT).show()
                                         null

@@ -173,7 +173,7 @@ class PanelUIManager(
                         
                         when (clip.subtype) {
                             "OTP" -> {
-                                val regex = Regex("(?<![\\d.])\\d{4,8}(?![\\d.])")
+                                val regex = Regex("(?<![\\d.])\\b\\d{4,8}\\b(?!\\.[\\d])")
                                 regex.find(originalText)?.let { match ->
                                     val start = match.range.first
                                     val end = match.range.last + 1
