@@ -23,6 +23,7 @@ import dev.bmg.edgeclip.R
 import dev.bmg.edgeclip.data.ClipEntity
 import dev.bmg.edgeclip.data.ClipRepository
 import dev.bmg.edgeclip.data.ClipType
+import dev.bmg.edgeclip.data.ContentMatcher
 import dev.bmg.edgeclip.data.SettingsManager
 import kotlinx.coroutines.*
 
@@ -173,8 +174,7 @@ class PanelUIManager(
                         
                         when (clip.subtype) {
                             "OTP" -> {
-                                val regex = Regex("(?<![\\d.])\\b\\d{4,8}\\b(?!\\.[\\d])")
-                                regex.find(originalText)?.let { match ->
+                                ContentMatcher.OTP_REGEX.find(originalText)?.let { match ->
                                     val start = match.range.first
                                     val end = match.range.last + 1
                                     spannable.setSpan(ForegroundColorSpan(ContextCompat.getColor(context, R.color.color_otp_highlight)), start, end, SpannableString.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -182,8 +182,7 @@ class PanelUIManager(
                                 }
                             }
                             "PHONE" -> {
-                                val regex = Regex("(?:\\+?\\d{1,3}[- ]?)?\\d{3,5}[- ]?\\d{3,5}(?:[- ]?\\d{1,5})?")
-                                regex.find(originalText)?.let { match ->
+                                ContentMatcher.PHONE_REGEX.find(originalText)?.let { match ->
                                     val start = match.range.first
                                     val end = match.range.last + 1
                                     spannable.setSpan(ForegroundColorSpan(ContextCompat.getColor(context, R.color.color_phone_highlight)), start, end, SpannableString.SPAN_EXCLUSIVE_EXCLUSIVE)

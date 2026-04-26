@@ -31,6 +31,7 @@ import dev.bmg.edgeclip.R
 import dev.bmg.edgeclip.data.ClipEntity
 import dev.bmg.edgeclip.data.ClipRepository
 import dev.bmg.edgeclip.data.ClipType
+import dev.bmg.edgeclip.data.ContentMatcher
 import dev.bmg.edgeclip.ui.theme.OtpDark
 import dev.bmg.edgeclip.ui.theme.OtpLight
 import dev.bmg.edgeclip.ui.theme.PhoneDark
@@ -373,8 +374,7 @@ fun ClipItem(clip: ClipEntity, index: Int, onDelete: () -> Unit, onCopy: () -> U
                             
                             when (clip.subtype) {
                                 "OTP" -> {
-                                    val regex = Regex("(?<![\\d.])\\b\\d{4,8}\\b(?!\\.[\\d])")
-                                    regex.find(text)?.let { match ->
+                                    ContentMatcher.OTP_REGEX.find(text)?.let { match ->
                                         addStyle(
                                             style = SpanStyle(color = otpColor, fontWeight = FontWeight.Bold),
                                             start = match.range.first,
@@ -383,8 +383,7 @@ fun ClipItem(clip: ClipEntity, index: Int, onDelete: () -> Unit, onCopy: () -> U
                                     }
                                 }
                                 "PHONE" -> {
-                                    val regex = Regex("(?:\\+?\\d{1,3}[- ]?)?\\d{3,5}[- ]?\\d{3,5}(?:[- ]?\\d{1,5})?")
-                                    regex.find(text)?.let { match ->
+                                    ContentMatcher.PHONE_REGEX.find(text)?.let { match ->
                                         addStyle(
                                             style = SpanStyle(color = phoneColor, fontWeight = FontWeight.Bold),
                                             start = match.range.first,
@@ -447,7 +446,7 @@ fun ClipItem(clip: ClipEntity, index: Int, onDelete: () -> Unit, onCopy: () -> U
                                     "URL" -> android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(text))
                                     "PHONE" -> android.content.Intent(android.content.Intent.ACTION_DIAL, android.net.Uri.parse("tel:$text"))
                                     "OTP" -> {
-                                        val digits = Regex("(?<![\\d.])\\b\\d{4,8}\\b(?!\\.[\\d])").find(text)?.value ?: text
+                                        val digits = ContentMatcher.findOtp(text) ?: text
                                         copyToClipboard(context, clip.copy(text = digits))
                                         android.widget.Toast.makeText(context, "OTP Copied", android.widget.Toast.LENGTH_SHORT).show()
                                         null
