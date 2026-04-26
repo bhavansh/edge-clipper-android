@@ -1,66 +1,89 @@
-# 🛡️ EdgeClip - Secure & Smart Clipboard Manager
+# <img src="metadata/app_icon.png" width="48" height="48" /> EdgeClip - Secure & Smart Clipboard Manager
 
-EdgeClip is a powerful, privacy-first clipboard manager for Android that puts your history just a swipe away. Access text, images, and smart content instantly through a sleek edge overlay, all while keeping your data locally encrypted.
+EdgeClip is a professional-grade, privacy-focused clipboard manager for Android. It bridges the gap between productivity and security by providing instant access to clipboard history through a non-intrusive edge overlay, while ensuring all data remains locally encrypted and under the user's control.
+
+---
+
+## 🌟 Professional Showcase
+
+This project demonstrates expertise in:
+- **Android System Internals:** Leveraging Accessibility Services and Window Management for background clipboard access on Android 10+.
+- **Security Engineering:** Implementation of SQLCipher with Android Keystore for AES-256 at-rest encryption.
+- **Modern UI/UX:** A hybrid architecture using **Jetpack Compose** for configuration and **Programmatic Android Views** for the high-performance system overlay.
+- **Clean Architecture:** Robust data layering with Repository patterns, Room persistence, and Coroutine-based reactivity.
 
 ---
 
 ## ✨ Key Features
 
-### 🚀 Instant Edge Access
-Swipe the customizable edge handle from any app to access your history. No more switching apps just to find that link you copied 5 minutes ago.
+### 🚀 High-Performance Edge Panel
+- **Instant Overlay:** Access history via a customizable swipe gesture from any screen.
+- **Contextual Filtering:** 2x3 quick-action grid to filter by URL, Image, OTP, or Phone.
+- **Smart Actions:** Dial numbers, open URLs, or copy OTP digits with a single tap.
 
-### 🧠 Smart Content Detection
-EdgeClip automatically recognizes what you copy:
-- **🔗 URLs:** Open links directly in your browser.
-- **📞 Phone Numbers:** One-tap to dial.
-- **🔑 OTPs:** Automatically isolated and highlighted in **Orange** for quick 2FA.
-- **🖼️ Images:** Previews and copies image clips seamlessly.
+### 🧠 Intelligence & Content Awareness
+- **OTP Extraction:** Automatically identifies 4-8 digit codes, highlighting them in **Bold Orange** and providing a "Copy Digits Only" shortcut.
+- **Media Support:** Captures and previews image clips directly within the overlay and history screens.
+- **Adaptive Visibility:** Automatically hides during fullscreen apps (games, videos) and pauses in sensitive apps (banking, password managers).
 
-### 🛡️ Uncompromising Privacy
-- **Encrypted Storage:** Everything is stored in an AES-256 encrypted database (SQLCipher) protected by the Android Keystore.
-- **Offline by Design:** No Internet permission required. Your data never leaves your device.
-- **Stealth Mode:** Automatically hides the edge handle in banking apps, games, or fullscreen videos.
-- **Pause Mode:** Toggle clipboard monitoring with a single tap when handling sensitive info.
-
-### 📊 Advanced Management
-- **Search & Filter:** Find clips instantly using the search bar or category filters (Links, Images, OTPs).
-- **Storage Insights:** Monitor how much space your history is using.
-- **Custom Retention:** Automatically cleanup old clips based on your preferred time or count limits.
+### 🛡️ Privacy & Security First
+- **Zero-Knowledge Storage:** 100% local encryption using **SQLCipher**. Encryption keys are generated and stored securely in the **Android Hardware Keystore**.
+- **No Internet Permission:** Designed to be completely offline, ensuring data never leaves the device.
+- **Stealth Monitoring:** Optional SMS listener to capture OTPs without reading private message content.
 
 ---
 
-## 📸 Screenshots
+## 📸 Visual Overview
 
-| 1. Edge Panel Grid | 2. Smart History | 3. Secure Settings |
+| Smart Edge Panel | Media & Links | Smart History |
 |:---:|:---:|:---:|
-| ![Edge Panel](https://via.placeholder.com/300x600?text=Edge+Panel+Grid) | ![History](https://via.placeholder.com/300x600?text=Smart+History+Filters) | ![Settings](https://via.placeholder.com/300x600?text=Privacy+Settings) |
+| <img src="screenshots/edge_panel_otp.jpg" width="280"> | <img src="screenshots/edge_panel_media.jpg" width="280"> | <img src="screenshots/history_main.jpg" width="280"> |
+
+| Permissions Setup | Advanced Settings | Overlay Config |
+|:---:|:---:|:---:|
+| <img src="screenshots/settings_permissions.jpg" width="280"> | <img src="screenshots/settings_db.jpg" width="280"> | <img src="screenshots/settings_overlay.jpg" width="280"> |
 
 ---
 
-## 🛠️ Installation & Setup
+## 🛠️ Technical Stack
 
-EdgeClip requires specific permissions to function correctly on modern Android versions:
+- **Language:** 100% Kotlin
+- **UI:** Jetpack Compose (Main UI) & XML/Programmatic Views (Overlay)
+- **Database:** Room + SQLCipher (SQLite encryption)
+- **Security:** AndroidX Security + Hardware Keystore
+- **Concurrency:** Kotlin Coroutines & Flow
+- **Pattern:** MVVM / Repository Pattern
+
+---
+
+## 🏗️ Technical Challenges & Solutions
+
+### Background Clipboard Access (Android 10+)
+**Challenge:** Android 10 restricted background clipboard access to the default IME or the app currently in focus.
+**Solution:** Implemented an `AccessibilityService` combined with a "Focus Window" hack. By maintaining a transparent 1x1 pixel window, EdgeClip can briefly "claim" focus to read the clipboard without interrupting the user's workflow.
+
+### Secure Key Management
+**Challenge:** Encrypting a database is useless if the key is stored in plain text or shared preferences.
+**Solution:** Integrated the **Android Keystore System**. The SQLCipher passphrases are randomly generated on the first boot and wrapped using a Master Key stored in the device's TEE (Trusted Execution Environment).
+
+---
+
+## 🚀 Installation
+
+EdgeClip requires specific permissions due to its deep system integration:
 
 1. **Install the APK.**
-2. **Enable Restricted Settings:** Go to *Settings > Apps > EdgeClip*, tap the three-dot menu (top-right), and select **"Allow restricted settings"**.
+2. **Enable Restricted Settings:** Go to *Settings > Apps > EdgeClip*, tap the `⋮` menu, and select **"Allow restricted settings"**.
 3. **Grant Permissions:**
-   - **Accessibility:** To monitor clipboard events securely.
-   - **Display Over Other Apps:** To show the floating edge handle.
-   - **Notifications:** To ensure the service remains active in the background.
-
----
-
-## 🏗️ Build Instructions
-
-To build a release version:
-1. Ensure you have a `keystore.properties` in the root directory.
-2. Run: `./gradlew assembleRelease`
-3. Find your signed APK in `app/build/outputs/apk/release/`.
+   - **Accessibility:** For smart clipboard monitoring.
+   - **Display Over Other Apps:** For the edge handle.
+   - **Notifications:** To maintain service priority.
 
 ---
 
 ## 👨‍💻 Author
 **Bhavansh Gupta**
+[LinkedIn](https://www.linkedin.com/in/bhavanshgupta/) | [GitHub](https://github.com/bhavansh)
 
 ---
-*Developed with a focus on security, usability, and speed.*
+*This project is a testament to building secure, system-level utilities that respect user privacy while enhancing productivity.*

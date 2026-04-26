@@ -17,7 +17,7 @@ class ClipRepository private constructor(
     suspend fun add(text: String) {
         if (text.isBlank()) return
         
-        val detectedSubtype = detectSubtype(text)
+        val detectedSubtype = ContentMatcher.detectSubtype(text)
         
         if (dao.existsText(text) > 0) {
             dao.updateTimestamp(text)
@@ -31,31 +31,7 @@ class ClipRepository private constructor(
         }
     }
 
-    fun detectSubtype(text: String): String {
-        val trimmed = text.trim()
-        
-        // 1. URL Detection
-        val urlRegex = Regex("^(https?|ftp|file)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]", RegexOption.IGNORE_CASE)
-        if (urlRegex.containsMatchIn(trimmed)) return "URL"
-        
-        // 2. OTP Detection (4-8 digits, no decimals)
-        val otpRegex = Regex("(?<![\\d.])\\b\\d{4,8}\\b(?!\\.[\\d])")
-        val otpMatch = otpRegex.find(trimmed)
-        if (otpMatch != null) {
-            val otpValue = otpMatch.value
-            val keywords = listOf("otp", "code", "verification", "auth", "login", "pin", "password")
-            val hasKeyword = keywords.any { trimmed.contains(it, ignoreCase = true) }
-            
-            // It's an OTP if it's the ONLY thing in the string OR it has a context keyword
-            if (trimmed == otpValue || hasKeyword) return "OTP"
-        }
-
-        // 3. Phone Detection
-        val phoneRegex = Regex("(?:\\+?\\d{1,3}[- ]?)?\\d{3,5}[- ]?\\d{3,5}(?:[- ]?\\d{1,5})?")
-        if (phoneRegex.containsMatchIn(trimmed)) return "PHONE"
-        
-        return "NONE"
-    }
+    fun detectSubtype(text: String): String = ContentMatcher.detectSubtype(text)
 
     // --- Image ---
     suspend fun addImage(bytes: ByteArray, extension: String = "jpg"): String? {
